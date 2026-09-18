@@ -1,0 +1,339 @@
+import React, { useState } from 'react';
+import { ResponsiveBar } from '@nivo/bar';
+import Card from '../Card/Card.js';
+import CardHeader from '../Card/CardHeader.js';
+import CardBody from '../Card/CardBody.js';
+import CardFooter from '../Card/CardFooter.js';
+import { makeStyles } from '@material-ui/core/styles';
+import formatDecimal from '../../utils/formatDecimal.js';
+
+const useStyles = makeStyles({
+  cardTitle: {
+    color: '#FFFFFF',
+    marginTop: '0px',
+    minHeight: 'auto',
+    fontWeight: '300',
+    fontFamily: "'Roboto', 'Helvetica', 'Arial', sans-serif",
+    marginBottom: '3px',
+    textDecoration: 'none',
+    textAlign: 'center',
+  },
+  cardCategory: {
+    margin: '0',
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  stats: {
+    color: '#FFFFFF',
+    display: 'inline-flex',
+    fontSize: '12px',
+    lineHeight: '22px',
+    '& svg': {
+      top: '4px',
+      width: '16px',
+      height: '16px',
+      position: 'relative',
+      marginRight: '3px',
+      marginLeft: '3px',
+    },
+    '& .material-icons': {
+      top: '4px',
+      position: 'relative',
+      marginRight: '3px',
+      marginLeft: '3px',
+      fontSize: '16px',
+      lineHeight: '16px',
+    },
+  },
+  backButton: {
+    cursor: 'pointer',
+    color: '#3f51b5',
+    textDecoration: 'underline',
+    marginTop: '10px',
+    textAlign: 'center',
+  },
+  pagination: {
+    display: 'flex',
+    justifyContent: 'center',
+    marginTop: '20px',
+    gap: '10px',
+  },
+  pageButton: {
+    cursor: 'pointer',
+    padding: '5px 10px', // Reduzindo o padding para diminuir o tamanho dos botões
+    backgroundColor: '#3f51b5',
+    color: '#FFFFFF',
+    borderRadius: '5px',
+    textAlign: 'center',
+    '&:hover': {
+      backgroundColor: '#303f9f',
+    },
+  },
+});
+
+const BarChartCity = ({ data, title, subtitle, meta }) => {
+  const classes = useStyles();
+  const [selectedState, setSelectedState] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10; // Número de itens por página
+
+  // Função para transformar os dados no formato necessário para o Nivo Chart
+  const transformData = (data) => {
+    if (!data || typeof data !== 'object') {
+      console.error('Dados inválidos fornecidos para transformData:', data);
+      return [];
+    }
+  
+    return Object.keys(data).map((estado) => ({
+      estado,
+      quantidadeTotal: data[estado]?.quantidadeTotal || 0, // Define 0 como valor padrão caso não exista
+    }));
+  };
+  
+  const transformCitiesData = (estado) => {
+    if (!data[estado] || !data[estado].cidades) {
+      console.error(`Dados inválidos para o estado ${estado}:`, data[estado]);
+      return [];
+    }
+  
+    const cities = data[estado].cidades;
+    return Object.keys(cities).map((cidade) => ({
+      cidade,
+      valor: cities[cidade]?.valor || 0, // Define 0 como valor padrão caso não exista
+    }));
+  };
+  
+
+  const formatValue = (value) => {
+    return value.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    });
+  };
+
+  const handleBarClick = (bar) => {
+    setSelectedState(bar.data.estado);
+  };
+
+  const handleBackClick = () => {
+    setSelectedState(null);
+  };
+
+  const handlePageChange = (direction) => {
+    setCurrentPage((prevPage) => {
+      if (direction === 'next') {
+        return prevPage + 1;
+      } else if (direction === 'prev' && prevPage > 1) {
+        return prevPage - 1;
+      }
+      return prevPage;
+    });
+  };
+
+  const paginateData = (data, page, itemsPerPage) => {
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return data.slice(startIndex, endIndex);
+  };
+
+  const CustomLabel = ({ bars }) => {
+    const shouldRotateLabels = bars.length > 2;
+  
+    return bars.map(bar => (
+      <text
+        key={bar.key}
+        x={bar.x + bar.width + 20}
+        y={bar.y + bar.height / 2}
+        textAnchor={shouldRotateLabels ? 'end' : 'start'}
+        transform={shouldRotateLabels ? `rotate(45, ${bar.x + bar.width + 20}, ${bar.y + bar.height / 2})` : null}
+        alignmentBaseline="central"
+        style={{
+          fontSize: '14px', // Ajuste o tamanho da fonte conforme necessário
+          fill: '#FFFFFF', // Cor dos textos
+        }}
+      >
+        {bar.data[bar.id]}
+      </text>
+    ));
+  };
+  
+
+  const currentData = selectedState
+    ? paginateData(transformCitiesData(selectedState), currentPage, itemsPerPage)
+    : paginateData(transformData(data), currentPage, itemsPerPage);
+
+  return (
+    <Card chart>
+      <CardHeader color="info">
+        <h4 className={classes.cardTitle}>{selectedState ? `Cidades de ${selectedState}` : title}</h4>
+        <p className={classes.cardCategory}>{subtitle}</p>
+      </CardHeader>
+      <CardBody>
+        <div style={{ height: '300px', backgroundColor: '#f0f0f0' }}>
+          {selectedState ? (
+            <ResponsiveBar
+              data={currentData}
+              keys={['valor']}
+              indexBy="cidade"
+              margin={{ top: 10, right: 100, bottom: 100, left: 160 }}
+              padding={0.3}
+              layout="vertical"
+              colors={{ scheme: 'category10' }}
+              axisBottom={{
+                tickSize: 5,
+                tickPadding: 5,
+                tickRotation: -45,
+                legend: '',
+                legendPosition: 'middle',
+                legendOffset: 32,
+              }}
+              axisLeft={{
+                tickSize: 5,
+                tickPadding: 5,
+                tickRotation: 0,
+                legend: '',
+                legendPosition: 'middle',
+                legendOffset: -40,
+              }}
+              labelSkipWidth={2}
+              labelSkipHeight={2}
+              labelTextColor={{ from: 'color', modifiers: [['darker', 1.6]] }}
+              animate={true}
+              motionStiffness={90}
+              motionDamping={15}
+              labelFormat={(value) => formatValue(value)}
+              enableGridY={false}
+              tooltip={({ id, value, color }) => (
+                <strong style={{ color }}>
+                  {formatValue(value)}
+                </strong>
+              )}
+              theme={{
+                background: '#f0f0f0',
+                axis: {
+                  domain: {
+                    line: {
+                      stroke: '#777777',
+                      strokeWidth: 1,
+                    },
+                  },
+                  ticks: {
+                    line: {
+                      stroke: '#777777',
+                      strokeWidth: 1,
+                    },
+                    text: {
+                      fill: '#777777',
+                    },
+                  },
+                },
+                grid: {
+                  line: {
+                    stroke: '#dddddd',
+                    strokeWidth: 1,
+                  },
+                },
+              }}
+              layers={['grid', 'axes', 'bars', 'markers', 'legends', CustomLabel]}
+            />
+          ) : (
+            <ResponsiveBar
+              data={currentData}
+              keys={['quantidadeTotal']}
+              indexBy="estado"
+              margin={{ top: 50, right: 130, bottom: 80, left: 60 }}
+              padding={0.3}
+              layout="vertical"
+              colors={{ scheme: 'category10' }}
+              axisBottom={{
+                tickSize: 5,
+                tickPadding: 5,
+                tickRotation: -45,
+                legend: '',
+                legendPosition: 'middle',
+                legendOffset: 32,
+              }}
+              axisLeft={{
+                tickSize: 5,
+                tickPadding: 5,
+                tickRotation: 0,
+                legend: '',
+                legendPosition: 'middle',
+                legendOffset: -40,
+              }}
+              labelSkipWidth={12}
+              labelSkipHeight={12}
+              labelTextColor={{ from: 'color', modifiers: [['darker', 1.6]] }}
+              animate={true}
+              motionStiffness={90}
+              motionDamping={15}
+              enableLabel={true}
+              labelFormat={(value) => formatValue(value)}
+              tooltip={({ id, value, color }) => (
+                <strong style={{ color }}>
+                  {formatValue(value)}
+                </strong>
+              )}
+              theme={{
+                background: '#f0f0f0',
+                axis: {
+                  domain: {
+                    line: {
+                      stroke: '#777777',
+                      strokeWidth: 1,
+                    },
+                  },
+                  ticks: {
+                    line: {
+                      stroke: '#777777',
+                      strokeWidth: 1,
+                    },
+                    text: {
+                      fill: '#333333',
+                    },
+                  },
+                },
+                grid: {
+                  line: {
+                    stroke: '#dddddd',
+                    strokeWidth: 1,
+                  },
+                },
+              }}
+              onClick={handleBarClick}
+              layers={['grid', 'axes', 'bars', 'markers', 'legends', CustomLabel]}
+            />
+          )}
+        </div>
+      </CardBody>
+      <CardFooter chart>
+        {selectedState && (
+          <div className={classes.backButton} onClick={handleBackClick}>
+            Voltar para o gráfico de estados
+          </div>
+        )}
+        <div className={classes.stats}>
+          <h3>{meta}</h3>
+        </div>
+        <div className={classes.pagination}>
+          <div
+            className={classes.pageButton}
+            onClick={() => handlePageChange('prev')}
+            style={{ visibility: currentPage > 1 ? 'visible' : 'hidden' }}
+          >
+            Anterior
+          </div>
+          <div
+            className={classes.pageButton}
+            onClick={() => handlePageChange('next')}
+            style={{ visibility: currentData.length === itemsPerPage ? 'visible' : 'hidden' }}
+          >
+            Próxima
+          </div>
+        </div>
+      </CardFooter>
+    </Card>
+  );
+};
+
+export default BarChartCity;

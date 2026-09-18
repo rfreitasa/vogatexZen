@@ -1,0 +1,93 @@
+/* CamposConfiguracao.css */
+
+.modal-content {
+    padding: 20px;
+    max-width: 400px;
+    margin: 0 auto;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+.header-divider {
+    width: 100%;
+    height: 2px;
+    background: #007BFF;
+    margin: 10px 0; /* Ajuste conforme necessário */
+  }
+  
+  .modal-content-container {
+    flex: 1; /* Isso garante que o contêiner se expanda para ocupar o espaço restante */
+  }
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.modal-title {
+    font-size: 1.2em;
+}
+
+.modal-close-btn {
+    cursor: pointer;
+    background: #3498db;
+    color: #fff;
+    border: none;
+    font-size: 1.5em;
+    border-radius: 5px;
+    padding: 10px 15px;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+.modal-close-btn:hover {
+    background: #2980b9;
+}
+
+.campo-checkbox {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* Adicione esta linha */
+    margin-bottom: 15px;
+}
+
+.checkbox-label {
+    margin-left: 10px;
+    font-size: 1.1em;
+}
+
+.checkbox-input {
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    border: 2px solid #3498db;
+    border-radius: 4px;
+    outline: none;
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+.checkbox-input:checked {
+    background-color: #3498db;
+    border: 2px solid #3498db;
+}
+.salvar-btn {
+    cursor: pointer;
+    background: #3498db; /* Cor azul */
+    color: #fff;
+    border: none;
+    padding: 3px;
+    font-size: 1.5em;
+    border-radius: 5px;
+    padding: 15px 20px;
+    margin: 0 auto; /* Adicione esta linha para centralizar o botão */
+    display: block; /* Adicione esta linha para garantir que o botão seja renderizado como um bloco */
+}
+
+  
+.salvar-btn:hover {
+    background: #2980b9; /* Cor azul mais escura no hover */
+}
