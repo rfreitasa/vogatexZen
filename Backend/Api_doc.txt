@@ -1,0 +1,76 @@
+////////////////Documentação API////////////////////
+
+
+-------------------LOGIN----------------------------------------------
+
+-POST  http://localhost:3002/api/v1/usuarios/login
+
+BODY:
+{      "email": "adolfola6786vo@gmail.com",
+            "senha": "testesenha"
+}
+
+
+
+Após obter o token adicionar no header
+Exemplo:
+
+paramentro: x-access-token  
+value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MTQsImlhdCI6MTU3NTQ2MjY5NSwiZXhwIjoxNTc1NDYyOTk1fQ.vj_RXHEgLcCzsfWMwdVNfdfyzIyziKrrRkNkCkzXUcI
+
+------------------CLIENTES---------------------------------------------
+
+-GET   http://localhost:3002/api/v1/clientes
+
+ BODY:
+ {     
+    "email": "fabiano@personal.com"  
+ }
+
+
+
+ ----------------USUARIOS----------------------------------------------
+
+ -GET  http://localhost:3002/api/v1/usuarios
+
+ Incluir no header o Token obtido no login
+paramentro: x-access-token  
+
+
+-POST   http://localhost:3002/api/v1/usuarios
+BODY
+{
+           "nome": "Antonio travis",
+            "email": "antonio@gmail.com",
+            "senha": "testesenha",
+            "ativo": "0",
+            "conta_id_erp": "189",
+            "grupo_id": "1",
+            "empresa_id": "1",
+            "perfil": "supervisor",
+            "conta_supervisor_id": "0",
+            "conta_gerente_id": "0"
+}
+
+
+
+
+-------------PONTOS DE ACESSO-------------
+
+-POST   http://localhost:3002/api/v1/permissoes/setpontoacesso
+
+BODY
+{  "nome_campo": "btn_edit_usuarios",
+   "descricao":"Edita usuários"
+}
+
+GET- http://localhost:3002/api/v1/permissoes/getAllpontoacesso
+
+//por ID
+GET- http://localhost:3002/api/v1/permissoes/getPontoAcesso/1
+
+
+//PEGANDO PERMISSOES DOS CAMPOS , PASSAR O ID DO USUARIO
+GET  http://localhost:3002/api/v1/permissoes/getPermissaoById/6
+
+

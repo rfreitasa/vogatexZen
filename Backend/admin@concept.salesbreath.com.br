@@ -1,0 +1,1115 @@
+
+const   impressosModel = require('../models/impressos');
+const   clientesModel = require('../models/clientes');
+const   empresaModel = require('../models/empresa');
+const   produtosModel = require('../models/produtos');
+const   organizacaoModel = require('../models/organizacao');
+const   pedidosModel = require('../models/pedidos');
+const   { validaImpressoPedido,validaImpressoProduto } = require('../validators/impressos');
+const   {successResponse, errorResponse} = require('../libs/response');
+const   fs = require("fs");
+const   PDFDocument = require("pdfkit");
+const   moment = require('moment-timezone');
+const   nodemailer = require('nodemailer');
+const   { PNG } = require('pngjs');
+const   imageType = require('image-type');
+const pngToJpeg = require('png-to-jpeg');
+
+
+
+
+const  logStruct = (func, error) => {
+        return {'func': func, 'file': 'impressosController', error}
+}
+
+const  printPedido = async (reqData) => {
+  try {
+    var result='';
+    var url ='';
+    const   agora = moment().tz("America/Sao_Paulo").format('DD-MM-YYYY HH:mm:ss');
+
+      const  validInput = validaImpressoPedido(reqData);
+      const dados_usuario = await clientesModel.getUserInformation(reqData.email);
+      const dados_conexao = await organizacaoModel.getConnectionData();
+    
+      if(dados_usuario[0] && dados_conexao){
+        //////////////////REGRA PEDIDOS////////////////////////// 
+        //VENDEDOR SÓ CONSEGUIRÁ IMPRIMIR OS PEDIDOS DELE, 
+          
+    //                console.log(reqData);
+                    const response = await pedidosModel.getpedido(reqData);
+                    console.log('222222');
+                          
+                    if (response && !response.length) {
+                            return errorResponse(404, 'PedidoNotfound');
+                    }
+                    else{
+                               // if(Number(response[0].vendedor.id)!==Number(dados_usuario[0].USUARIO_CONTA_ID_ERP)){
+                                  
+                                 //     return errorResponse(404, 'Sem permissao para visualizar esse pedido');
+                               // } 
+                               // else{
+      
+
+
+                                          const empresaERP = await empresaModel.getEmpresaERPById(response[0].empresa.id);
+                                          const responseCliente  = await clientesModel.getContaById(response[0].conta.id);                                          
+                                          const contatoCliente   = await clientesModel.getContatosByClienteId(response[0].conta.id);
+                                          const contatoVendedor   = await clientesModel.getContatosByClienteId(response[0].vendedor.id);
+
+                                          const sleep = (milliseconds) => {
+                                            return new Promise(resolve => setTimeout(resolve, milliseconds))
+                                          }
+                                    
+          
+                                          const grv_arq = () => {
+                                               return new Promise((resolved, rejectd) => { 
+                                                                var telefoneCliente = contatoCliente.filter(function(item) {  
+                                                                        return  item.tipo== 'TELEFONE';  
+                                                                  });
+                                                                  var telefoneVendedor = contatoVendedor.filter(function(item) {  
+                                                                        return  item.tipo== 'TELEFONE';  
+                                                                  });
+
+                                                                  const dados = response[0].itens;
+                                                                    console.log(response[0]);
+                                                                  //gerando o Pedido //caceçalho    
+                                                                  function geraCabecalhoEmpresa(doc) {
+                                                                                
+                                                                                        geraHR(doc, 15);
+                                                                                        doc
+                                                                                          //PRIMEIRA LINHA
+                                                                                          .fontSize(10)
+                                                                                          .text("Empresa:", 30, 20)
+                                                                                          
+                                                                                          .fontSize(8)
+                                                                                          .text(`${response[0].empresa?response[0].empresa.nome:''}`,80,21)
+                                                                                  
+                                                                                          //2 LINHA
+                                                                                          .fontSize(10)
+                                                                                          .text("Endereço:", 30,35)
+                                                                                          
+                                                                                          .fontSize(8)
+                                                                                          .text(`${empresaERP[0]?empresaERP[0].ENDERECO:''} , ${empresaERP[0]?empresaERP[0].NUMERO:''} - ${empresaERP[0]?empresaERP[0].BAIRRO:''}`,80,36)
+                                                                                          
+                                                                                          //3 LINHA
+                                                                                          .fontSize(10)
+                                                                                          .text("Cep:", 30, 50)
+                                                                                          
+                                                                                          .fontSize(8)
+                                                                                          .text(`${empresaERP[0]?empresaERP[0].CEP:''}`,80,51)
+                                          
+                                                                                          //4 LINHA
+                                                                                          .fontSize(10)
+                                                                                          .text("Telefone:", 30, 65)
+                                                                                          
+                                                                                          .fontSize(8)
+                                                                                          .text(`${empresaERP[0]?empresaERP[0].FONE1:''}`,80,66)
+                                          
+                                                                                          .fontSize(10)
+                                                                                          .text("Email:", 160, 65)
+                                                                                          
+                                                                                          .fontSize(8)
+                                                                                          .text(`${empresaERP[0]?empresaERP[0].EMAIL:''}`,190,66)
+                                                                                          
+                                          
+                                                                                          //5 LINHA
+                                                                                          .fontSize(10)
+                                                                                          .text("CNPJ:", 30, 80)
+                                          
+                                                                                          .fontSize(8)
+                                                                                          .text(`${empresaERP[0]?empresaERP[0].CGC:''}`,80,81)
+                                          
+                                                                                          .fontSize(10)
+                                                                                          .text("Inscrição Estadual:", 160, 80)
+                                          
+                                                                                          .fontSize(8)
+                                                                                          .text(`${empresaERP[0]?empresaERP[0].INSCRICAO:''}`,250,81)
+                                                                                          doc.image("./imagens/concept.jpeg", 400, 25, { width: 150 , align:"right" })  
+                                                                                          .text("Impresso gerado em "+ agora, 200, 80, { align: "right" })
+                                                                                          geraHR(doc, 95);
+                                          
+                                                                      
+                                                                    }
+                                                              
+                                                                    
+                      
+                       
+                                                                    function geraCabecalhoCliente(doc) {
+                                                                                                //console.log(responseCliente);
+                                                                                                                    
+                                                                                          geraHR(doc, 100);
+                                                                                          doc
+                                                                                            //PRIMEIRA LINHA
+                                                                                            .fontSize(10)
+                                                                                            .text("Conta:", 30, 110)
+                                                                                            
+                                                                                            .fontSize(8)
+                                                                                            .text(`${response[0]?response[0].conta.id:''} - ${response[0]?response[0].conta.nome:''} `,70,111)
+                                          
+                                                                                            //PRIMEIRA LINHA LADO DIREITO
+                                                                                            .fontSize(10)
+                                                                                            .text("Numero do Pedido:", 320, 110)
+                                          
+                                                                                            .fontSize(8)
+                                                                                            .text(`${response[0]?response[0].numeroSistema:''}`,420,111)
+                                          
+                                          
+                                          
+                                                                                            //2 LINHA
+                                                                                            .fontSize(10)
+                                                                                            .text("CNPJ:", 30,125)
+                                                                                            
+                                                                                            .fontSize(8)
+                                                                                            .text(`${responseCliente[0]?responseCliente[0].cnpj:''}`,70,126)
+                                                                                        
+                                                                                            
+                                                                                            //2 LINHA LADO DIREITO
+                                                                                            .fontSize(10)
+                                                                                            .text("Referência:", 320,125)
+                                                                                            
+                                                                                            .fontSize(8)
+                                                                                            .text(`${response[0]?response[0].referencia:''} `,380,126)
+                                                                                            
+                                          
+                                                                                            //3 LINHA
+                                                                                            .fontSize(10)
+                                                                                            .text("Inscrição estadual:", 30, 140)
+                                                                                            
+                                                                                            .fontSize(8)
+                                                                                            .text(`${responseCliente[0]?responseCliente[0].inscricaoEstadual:''}`,130,141)
+                                          
+                                          
+                                                                                            //3 LINHA LADO DIREITO
+                                                                                            .fontSize(10)
+                                                                                            .text("Emissão:", 320,140)
+                                                                                            
+                                                                                            .fontSize(8)
+                                                                                            .text(formatDate(`${response[0]?response[0].emissao:''} `),390,141)
+                                                                                            
+                                          
+                                                                                            //4 LINHA
+                                                                                            .fontSize(10)
+                                                                                            .text("Endereço:", 30, 155)
+                                                                                            
+                                                                                            .fontSize(8)
+                                                                                            .text(`${responseCliente[0]&&responseCliente[0].enderecoLogradouro?responseCliente[0].enderecoLogradouro:''} , ${responseCliente[0]&&responseCliente[0].enderecoNumero?responseCliente[0].enderecoNumero:''}  ${responseCliente[0]&&responseCliente[0].enderecoBairro?responseCliente[0].enderecoBairro:''}`,80,156)
+                                                                                            
+                                                                                            //4 LINHA LADO DIREITO
+                                                                                            .fontSize(10)
+                                                                                            .text("Entrega:", 320,155)
+                                                                                            
+                                                                                            .fontSize(8)
+                                                                                            .text(formatDate(`${response[0]?response[0].previsao:''}`),390,156)
+                                          
+                                                                                            //5 LINHA
+                                                                                            .fontSize(10)
+                                                                                            .text("CEP:", 30, 170)
+                                          
+                                                                                            .fontSize(8)
+                                                                                            .text(`${responseCliente[0]?responseCliente[0].enderecoCidade:''} / ${responseCliente[0]?responseCliente[0].enderecoEstado:''} - ${responseCliente[0]?responseCliente[0].enderecoCep:''}`,70,171)
+                                          
+                                                                                            //5 LINHA LADO DIREITO
+                                                                                            .fontSize(10)
+                                                                                            .text("Condições de Pagamento:", 320,170)
+                                                                                            
+                                                                                            .fontSize(8)
+                                                                                            .text(formatDate(`${response[0]?response[0].prazoPagto: ''}`),450,171)
+                                          
+                                          
+                                          
+                                                                                            //6 LINHA
+                                                                                            .fontSize(10)
+                                                                                            .text("Telefone:", 30, 185)
+                                          
+                                                                                            .fontSize(8)
+                                                                                            .text(`${telefoneCliente[0]?telefoneCliente[0].descricao: ''}`,70,186)
+                                          
+                                          
+                                                                                            //6 LINHA LADO DIREITO
+                                                                                            .fontSize(10)
+                                                                                            .text("Vendedor:", 320,185)
+                                                                                            
+                                                                                            .fontSize(8)
+                                                                                            .text(`${response[0]?response[0].vendedor.nome:''}`,375,186)
+                                          
+                                          
+                                                                                            //7 LINHA
+                                                                                            .fontSize(10)
+                                                                                            .text("Tipo de frete:", 30, 200)
+                                          
+                                                                                            .fontSize(8)
+                                                                                            .text(`${response[0]?response[0].tipoFrete:''}`,100,201)
+                                          
+                                          
+                                                                                            //7 LINHA LADO DIREITO
+                                                                                            .fontSize(10)
+                                                                                            .text("Telefone:", 320,200)
+                                                                                            
+                                                                                            .fontSize(8)
+                                                                                            .text(`${telefoneVendedor[0]?telefoneVendedor[0].descricao: ''}`,400,201)
+                                          
+                                          
+                                                                                            //8 LINHA
+                                                                                            .fontSize(10)
+                                                                                            .text("Transportadora:", 30, 215)
+                                          
+                                                                                            .fontSize(8)
+                                                                                            .text(`${response[0]?response[0].transportadora.nome:''}`,120,216)
+                                          
+                                                                                            geraHR(doc, 230);
+                                                                                            geraHR(doc, 235);
+                                          
+                                                                                            //1 LINHA
+                                                                                            doc
+                                                                                            .fontSize(10)
+                                                                                            .text("Status do pedido:", 30, 240)
+                                          
+                                                                                            .fontSize(8)
+                                                                                            .text(`${response[0]?response[0].status:''}`,120,241)
+                                          
+                                                                                            geraHR(doc, 320);
+                                          
+                                          
+                                                                        
+                                                                      }
+                      
+                      
+                      
+                                                                  function geraTituloimpressos(doc,dados) {
+                                                                                            doc
+                                                                                              .fillColor("#444444")
+                                                                                              .fontSize(10)
+                                                                                              .font("Helvetica-Bold")
+                                                                                              .text(`Itens do pedido de Venda`, 50, 290,{ align: "center" });
+                                                                                          
+                                                                                            geraHR(doc, 305);
+                                              
+                                                                  }
+                                                          
+                                                                  function geraTabeladeDados(doc,dados) {
+                                                                                              var    posicaoInicial = 310;
+                                                                                              const  posicaoFinal = 770;
+                                                                                              var    position =310;
+                                                                                              var    page =0;
+                                                                                            
+                                                                                              
+                                                                                                    let i;
+                                                                                                    
+                                                                                                    doc.font("Helvetica-Bold");
+                                                                                                            
+                                                                                                    generateTableRow(
+                                                                                                                doc,
+                                                                                                                posicaoInicial,
+                                                                                                                "Código",
+                                                                                                                "Descrição",
+                                                                                                                "Grade",
+                                                                                                                "Quantidade",
+                                                                                                                "Unidade",
+                                                                                                                "Valor Un",
+                                                                                                                "Valor total"
+                                                                                                            );
+                                                                                              geraHR(doc,posicaoInicial + 10);
+                                                                                              doc.font("Helvetica");
+                                                                                              var VTotal=0;
+                                                                                              var TotQuant =0;
+                                                                                              
+                                                                                              //loop nos dados 
+                                                                                              for (i = 0; i < response[0].itens.length; i++) {
+                                                                                                
+                                                                                                            doc.switchToPage(page); 
+                                                                                                            const    item = response[0].itens[i];
+                                                                                                            position = position + 15;
+                                                                                                            VTotal = VTotal + (item.valorUnitario * item.quantidade);
+                                                                                                            TotQuant = TotQuant + item.quantidade;
+                                                                                                            
+                                                                                                            if(position>='770'){
+                                                                                                
+                                                                                                              doc.addPage({ size: "A4", margin: 50,bufferPages:true});
+                                                                                                              page = page +1;
+                                                                                                              doc.image("./imagens/concept.jpeg", 400, 25, { width: 150 , align:"right" })  
+                                                                                                              .fontSize(8)
+                                                                                                              
+                                                                                                              position=70;
+                                                                                                              
+                                                                                                            }
+                                                                              
+                                                                                                              generateTableRow(
+                                                                                                                          doc,
+                                                                                                                          position,
+                                                                                                                          item.item.id,
+                                                                                                                          item.item.nome,
+                                                                                                                          item.item.grade,
+                                                                                                                          formatDecimal(item.quantidade),
+                                                                                                                          item.unidadeCodigo,
+                                                                                                                          formatCurrency(item.valorUnitario),
+                                                                                                                          formatCurrency(item.valorUnitario*item.quantidade)
+                                                                                                              );
+                                                                                                          
+                                                                                                                        geraHR(doc, position + 8);
+                                                                                                }
+                                                                                              
+                                                                                            
+                                                                                                const   TotalPosition = position + 25;
+                                                                                                doc.font("Helvetica-Bold");
+                                                                                                generateTableRow(
+                                                                                                  doc,
+                                                                                                  TotalPosition,
+                                                                                                  "",
+                                                                                                  "",
+                                                                                                  "Total Quantidade",
+                                                                                                  formatDecimal(TotQuant),
+                                                                                                  "",
+                                                                                                  "Valor Total",
+                                                                                                  formatCurrency(VTotal)
+                                                                                                );
+                                                                                                doc.font("Helvetica");
+                                                                  }
+                                                                  
+                                                                  function generateFooter(doc) {
+                                                                          doc
+                                                                            .fontSize(10)
+                                                                            .text(
+                                                                              "_______________________________",
+                                                                              50,
+                                                                              760,
+                                                                              { align: "center", width: 500 }
+                                                                            ).text(
+                                                                              `${response[0]?response[0].conta.nome:''}`,
+                                                                              50,
+                                                                              780,
+                                                                              { align: "center", width: 500 }
+                                                                            );
+                                                                            const range = doc.bufferedPageRange(); 
+                                                                          
+                                                                            var j=0;
+                                                                            
+                                                                            for( let j = 0; j <  (0 + range.count); j++) {
+                            
+                                                                              doc.switchToPage(j);
+                                                                              geraHR(doc,doc.page.height - 17);
+                            
+                                                                              doc  
+                                                                                .fontSize(8)
+                                                                                .text(`Powered by SalesBreath - breathitsolutions@gmail.com       Página ${j + 1} of ${range.count}`, 
+                                                                                        200, 
+                                                                                        doc.page.height - 15, 
+                                                                                        { height : 15});
+                                                                            }
+                            
+                                                                  }
+                                                                  
+                                                                  function generateTableRow(
+                                                                    doc,
+                                                                    y,
+                                                                    codigo,
+                                                                    descricao,
+                                                                    grade,
+                                                                    quantidade,
+                                                                    un,
+                                                                    valor_un,
+                                                                    valor_total
+                                                                  ) { 
+                                                                    doc
+                                                                      .fontSize(6)
+                                                                      .text(codigo, 30, y)
+                                                                      .text(descricao, 80, y)
+                                                                      .text(grade, 180, y, { width: 90, align: "left" })
+                                                                      .text(quantidade, 300, y, { width: 90, align: "center" })
+                                                                      .text(un, 350, y, { width: 90, align: "center" })
+                                                                      .text(valor_un, 410, y, { width: 90, align: "center" })
+                                                                      .text(valor_total, 510, y, { width: 90, align: "left" })
+                                                                        
+                                                                  }
+                                                                  
+                                                                  function geraHR(doc, y) {
+                                                                    doc
+                                                                      .strokeColor("#aaaaaa")
+                                                                      .lineWidth(1)
+                                                                      .moveTo(20, y)
+                                                                      .lineTo(580, y)
+                                                                      .stroke();
+                                                                  }
+                                                                  
+                                                                  function formatCurrency(numero) {
+                                                                    return "R$ " + (numero).toFixed(2);
+                                                                  }
+                                                                  function formatDecimal(numero) {
+                                                                    return  (numero).toFixed(2);
+                                                                  }
+                                                                  
+                                                                  
+                                                                  function formatDate(data){
+                                                                    return (data.substr(0, 10).split('-').reverse().join('/'));
+                      
+                                                                }
+                                                                
+                                                                let doc = new PDFDocument({ size: "A4", margin: 50,bufferPages:true});
+                                                                                                          
+                                                                geraCabecalhoEmpresa(doc);
+                                                                geraCabecalhoCliente(doc);
+                                                                geraTituloimpressos(doc,dados);
+                                                                geraTabeladeDados(doc,dados);
+                                                                generateFooter(doc);
+                                                                        
+                                                                doc.flushPages();
+                                                                 url=`./pdf/${dados_usuario[0]?dados_usuario[0].USUARIO_ID:'user'}.pdf`;
+                                                                 const writeStream = doc.pipe(fs.createWriteStream(`./pdf/${dados_usuario[0]?dados_usuario[0].USUARIO_ID:'user'}.pdf`));                
+                                                                doc.end();
+                                                                const promise = new Promise((resolve, reject) => {
+                                                                                                               console.log('5');
+                                                                                                                writeStream.on('finish', () => {
+                                                                                                               console.log('4');
+                                                                                                               writeStream.end()
+                                                                                                                  resolve(url);
+                                                                                                                  
+                                                                  
+                                                                  
+                                                                                                                });
+                                                                });
+                                                             
+                                                                                                                /*
+                                                                const doSomething = async () => {
+                                                                  await sleep(5000)
+                                                                console.log('esperou 5 segundos');
+                                                                }
+                                                                
+                                                                doSomething();
+*/
+
+                                                                if(reqData.sendto){
+
+                                                                  const envia_email = async () => {
+                                                                    await sleep(3000);
+                                                                
+                                                                  
+                                                                                var  transporte =nodemailer.createTransport({
+                                                                                    host: "smtp.gmail.com",
+                                                                                    port: 587,
+                                                                                    secure: false, // upgrade later with STARTTLS
+                                                                                    auth: {
+                                                                                      user: "breathitsolutions@gmail.com",
+                                                                                      pass: "a@123#456"
+                                                                                    }
+                                                                                  });
+                                                                                var email = {
+                                                                                from: 'breathitsolutions@gmail.com', // Quem enviou este e-mail
+                                                                                to: `${reqData.sendto}`, // Quem receberá
+                                                                                subject: `Pedido de venda ${response[0].numeroSistema}`,  // Um assunto bacana :-) 
+                                                                                html: `Email enviado pelo sistema SalesBreath.`, // O conteúdo do e-mail
+                                                                                attachments: [{ // Basta incluir esta chave e listar os anexos
+                                                                                    filename: 'pedido.pdf', // O nome que aparecerá nos anexos
+                                                                                    path: `./pdf/${dados_usuario[0].USUARIO_ID}.pdf` // O arquivo será lido neste local ao ser enviado
+                                                                                  }]
+                                                                                };
+
+                                                                                transporte.sendMail(email, function(err, info){
+                                                                                        if(err){
+                                                                                          return errorResponse(error.status, error.message);
+
+                                                                                        }
+                                                                                      else{     
+
+                                                                                      }
+                                                                                        
+                                                                               });
+                                                                               return successResponse(200,'email enviado')
+                                                                             
+                                                                              }
+                                                                              envia_email();               
+                                                                 }
+                                                                 else{
+                                          //                            promise.then(function(value){
+                                            //                            return url;
+                                              //                        })
+                                          //                            return url;
+
+                                                                }
+                                                                
+                          setTimeout(()=>{
+                         
+                            resolved(url);  
+                          }
+                          , 3000);    
+}); 
+};          
+const arquivo_gerado = await grv_arq();
+
+return successResponse(200, arquivo_gerado);
+                                                 
+                                                              }
+                 
+                                        //return respPromise;
+                                          
+                              
+                  //  }
+      
+    }
+    
+  
+  }
+    catch (error) {
+              console.error('error -> ', logStruct('fetchimpressos', error))
+              return errorResponse(error.status, error.message);
+    }
+
+      
+
+
+
+};
+
+
+
+const  printEspec = async (reqData) => {
+  try {
+    var url ='';
+    const   agora = moment().tz("America/Sao_Paulo").format('DD-MM-YYYY HH:mm:ss');
+
+      const response = await produtosModel.getEspecProduto(reqData.produto_id);
+     
+      const nome_imagens_complementar = response[0].ITEM_CODIGO.normalize('NFD').replace(/([\u0300-\u036f]|[^0-9a-zA-Z])/g, '');
+      
+
+
+
+
+      const saveimage = () => {
+        return new Promise((resolved, rejectd) => { 
+
+                              console.log(response[0]);
+                              response[0].IMAGEM01? response[0].IMAGEM01(function(err, name, eventEmitter) {
+                              let buffers = [];
+                              eventEmitter.on('data', function(chunk) {
+                                  buffers.push(chunk);
+                              });
+                              eventEmitter.once('end', function() {
+                              let buffer = Buffer.concat(buffers);
+
+                                  // console.log(buffer.toString('base64')); // print base64
+                                
+                                var image = new Promise(function(resolve, reject) {
+                                resolve( fs.writeFileSync(`./pdf/${nome_imagens_complementar}01.png`,buffer, function(err, result) {
+                                    if(err) console.log('error', err);
+                                    else{
+                                    }
+                                    }));
+                                    });
+                                  });
+                                }):""
+                            
+                          //RENDER IMAGEM 2 
+                          response[0].IMAGEM02?response[0].IMAGEM02(function(err, name, eventEmitter) {
+                              let buffers2 = [];
+                              eventEmitter.on('data', function(chunk) {
+                                  buffers2.push(chunk);
+                              });
+                              eventEmitter.once('end', function() {
+                              let buffer2 = Buffer.concat(buffers2);
+
+                              // console.log(buffer.toString('base64')); // print base64
+                            
+                            var image2 = new Promise(function(resolve, reject) {
+                            resolve( fs.writeFile(`./pdf/${nome_imagens_complementar}02.png`,buffer2, function(err, result) {
+                                if(err) console.log('error', err);
+                                else{
+                        }
+                                }));
+                                });
+                              });
+                            }):""
+                            //RENDER IMAGEM 2 
+                            response[0].IMAGEM03? response[0].IMAGEM03(function(err, name, eventEmitter) {
+                              let buffers3 = [];
+                              eventEmitter.on('data', function(chunk) {
+                                buffers3.push(chunk);
+                              });
+                              eventEmitter.once('end', function() {
+                              let buffer3 = Buffer.concat(buffers3);
+
+                            // console.log(buffer.toString('base64')); // print base64
+                            
+                          var image3 = new Promise(function(resolve, reject) {
+                          resolve( fs.writeFile(`./pdf/${nome_imagens_complementar}03.png`,buffer3, function(err, result) {
+                                if(err) console.log('error', err);
+                                else{
+                          }
+                                }));
+                                });
+                              });
+                            }):""
+                              //RENDER IMAGEM 4
+                              response[0].IMAGEM04? response[0].IMAGEM04(function(err, name, eventEmitter) {
+                              let buffers4 = [];
+                              eventEmitter.on('data', function(chunk) {
+                                buffers4.push(chunk);
+                              });
+                              eventEmitter.once('end', function() {
+                              let buffer4 = Buffer.concat(buffers4);
+
+                            // console.log(buffer.toString('base64')); // print base64
+                            
+                          var image4 = new Promise(function(resolve, reject) {
+                          resolve( fs.writeFile(`./pdf/${nome_imagens_complementar}04.png`,buffer4, function(err, result) {
+                                if(err) console.log('error', err);
+                                else{
+                          }
+                                }));
+                                });
+                              });
+                            }):""
+
+                              //RENDER IMAGEM 5
+                              response[0].IMAGEM05?  response[0].IMAGEM05(function(err, name, eventEmitter) {
+                              let buffers5 = [];
+                              eventEmitter.on('data', function(chunk) {
+                                buffers5.push(chunk);
+                              });
+                              eventEmitter.once('end', function() {
+                              let buffer5 = Buffer.concat(buffers5);
+
+                            // console.log(buffer.toString('base64')); // print base64
+                            
+                          var image5 = new Promise(function(resolve, reject) {
+                          resolve( fs.writeFile(`./pdf/${nome_imagens_complementar}05.png`,buffer5, function(err, result) {
+                                if(err) console.log('error', err);
+                                else{
+                          }
+                                }));
+                                });
+                              });
+                            }):""
+
+                              //RENDER IMAGEM 6
+                              response[0].IMAGEM06?response[0].IMAGEM06(function(err, name, eventEmitter) {
+                                let buffers6 = [];
+                                eventEmitter.on('data', function(chunk) {
+                                  buffers6.push(chunk);
+                                });
+                                eventEmitter.once('end', function() {
+                                let buffer6 = Buffer.concat(buffers6);
+  
+                              // console.log(buffer.toString('base64')); // print base64
+                              
+                            var image6 = new Promise(function(resolve, reject) {
+                            resolve( fs.writeFile(`./pdf/${nome_imagens_complementar}06.png`,buffer6, function(err, result) {
+                                  if(err) console.log('error', err);
+                                  else{
+                            }
+                                  }));
+                                  });
+                                });
+                              }):""
+
+                                //RENDER IMAGEM 7
+                                response[0].IMAGEM07? response[0].IMAGEM07(function(err, name, eventEmitter) {
+                                  let buffers7 = [];
+                                  eventEmitter.on('data', function(chunk) {
+                                    buffers7.push(chunk);
+                                  });
+                                  eventEmitter.once('end', function() {
+                                  let buffer7 = Buffer.concat(buffers7);
+    
+                                // console.log(buffer.toString('base64')); // print base64
+                                
+                              var image7 = new Promise(function(resolve, reject) {
+                              resolve( fs.writeFile(`./pdf/${nome_imagens_complementar}07.png`,buffer7, function(err, result) {
+                                    if(err) console.log('error', err);
+                                    else{
+                              }
+                                    }));
+                                    });
+                                  });
+                                }):""
+
+
+                                  //RENDER IMAGEM 8
+                             response[0].IMAGEM08? response[0].IMAGEM08(function(err, name, eventEmitter) {
+                                let buffers8 = [];
+                                eventEmitter.on('data', function(chunk) {
+                                  buffers8.push(chunk);
+                                });
+                                eventEmitter.once('end', function() {
+                                let buffer8 = Buffer.concat(buffers8);
+  
+                              // console.log(buffer.toString('base64')); // print base64
+                              
+                            var image8 = new Promise(function(resolve, reject) {
+                            resolve( fs.writeFile(`./pdf/${nome_imagens_complementar}08.png`,buffer8, function(err, result) {
+                                  if(err) console.log('error', err);
+                                  else{
+                            }
+                                  }));
+                                  });
+                                });
+                              }):""
+                                //RENDER IMAGEM 9
+                                response[0].IMAGEM09?  response[0].IMAGEM09(function(err, name, eventEmitter) {
+                                  let buffers9 = [];
+                                  eventEmitter.on('data', function(chunk) {
+                                    buffers9.push(chunk);
+                                  });
+                                  eventEmitter.once('end', function() {
+                                  let buffer9 = Buffer.concat(buffers9);
+    
+                                // console.log(buffer.toString('base64')); // print base64
+                                
+                              var image9 = new Promise(function(resolve, reject) {
+                              resolve( fs.writeFile(`./pdf/${nome_imagens_complementar}09.png`,buffer9, function(err, result) {
+                                    if(err) console.log('error', err);
+                                    else{
+                              }
+                                    }));
+                                    });
+                                  });
+                                }):""
+                                  //RENDER IMAGEM 10
+                                  response[0].IMAGEM10? response[0].IMAGEM10(function(err, name, eventEmitter) {
+                                let buffers10 = [];
+                                eventEmitter.on('data', function(chunk) {
+                                  buffers10.push(chunk);
+                                });
+                                eventEmitter.once('end', function() {
+                                let buffer10 = Buffer.concat(buffers10);
+  
+                              
+                              var image10 = new Promise(function(resolve, reject) {
+                              resolve( fs.writeFile(`./pdf/${nome_imagens_complementar}10.png`,buffer10, function(err, result) {
+                                    if(err) console.log('error', err);
+                                    else{
+                              }
+                                    }));
+                                    });
+                                  });
+                                }):""
+
+                          setTimeout(()=>{
+                         
+                              resolved('ok');  
+                            }
+                            , 3000);    
+  }); 
+};
+   
+const geradoc = () => {
+
+
+  return new Promise((resolvetd, rejecttd) => { 
+    console.log('1');
+                                                                  //gerando o Pedido //caceçalho    
+                                                                  function geraCabecalhoEmpresa(doc) {
+                                                                                
+                                                                                        
+                                                                    doc
+                                                                      //PRIMEIRA LINHA
+                                                                      .fontSize(10)
+                                                                      .text("Ficha técnica do produto", 30, 20)
+                                                                      geraHR(doc, 30)
+                                                                      
+                                                                      doc.image("./imagens/concept.jpeg", 400, 35, { width: 150 , align:"right" })  
+                                                                      .fontSize(8)
+                                                                      .text("Impresso gerado em "+ agora, 230, 70, { align: "right" })
+                                                                    //  geraHR(doc, 95);
+                      
+                                                  
+                                                }
+                                          
+                                                
+  
+   
+                                                function geraCabecalhoProduto(doc) {
+                                                                            //console.log(responseCliente);
+                                                                                                
+                                                                     
+                                                                      doc
+                                                                        
+                                                                        .fontSize(14)
+                                                                        .text(`${response[0]? response[0].ITEM_CODIGO + '  -  ' +response[0].ITEM_NOME:null }`,30,90)
+                                                                        geraHR(doc, 105)
+                                                                        doc
+
+                                                                        //PRIMEIRA LINHA LADO DIREITO
+                                                                        .fontSize(8)
+                                                                        .text("Composição:", 30, 110)
+                      
+                                                                        .fontSize(6)
+                                                                        .text(`${response[0]?response[0].COMPOSICAO:null}`,120,111)
+                      
+                                                                        //2 LINHA
+                                                                        .fontSize(8)
+                                                                        .text("Largura total:", 30,120)
+                                                                        
+                                                                        .fontSize(6)
+                                                                        .text(`${response[0]?response[0].LARGURA:null}`,120,121)
+                      
+                                                                        //3 LINHA
+                                                                        .fontSize(8)
+                                                                        .text("Gramatura linear:", 30, 130)
+                                                                        
+                                                                        .fontSize(6)
+                                                                        .text(`${response[0]?response[0].GRAMATURA_ML+' g/ml':null}`,120,131)
+                      
+                                                                        //4 LINHA
+                                                                        .fontSize(8)
+                                                                        .text("Gramatura por m2:", 30, 140)
+                                                                        
+                                                                        .fontSize(6)
+                                                                        .text(`${response[0]?response[0].GRAMATURA+' g/m²':null}`,120,141)
+                                                                        
+                                                                        //5 LINHA
+                                                                        .fontSize(8)
+                                                                        .text("Rendimento:", 30, 150)
+                      
+                                                                        .fontSize(6)
+                                                                        .text(`${response[0]?response[0].RENDIMENTO:null}`,120,151)
+                      
+                                                                        //6 LINHA
+                                                                        .fontSize(8)
+                                                                        .text("País Origem:", 30, 160)
+                      
+                                                                        .fontSize(6)
+                                                                        .text(`${response[0]?response[0].PAIS_ORIGEM:null}`,120,161)
+                                                                        
+                                                                        //7 LINHA
+                                                                        .fontSize(8)
+                                                                        .text("Classificação fiscal:", 30, 170)
+
+                                                                        .fontSize(6)
+                                                                        .text(`${response[0]?response[0].CLASSIFICACAO_FISCAL:null}`,120,171)
+                                                                        
+                                                                        //1 LINHA
+                                                                        doc
+                                                                        .fontSize(8)
+                                                                        .text("Orientações de conservação", 30, 190)
+                      
+                                                                        geraHR(doc, 200);
+                                                                        //Aqui ficará as imagens
+                                                                        response[0].IMAGEM01? doc.image(`./pdf/${nome_imagens_complementar}01.png`, 30, 205, { width: 15, height: 15 , align:"left" }) :"" 
+                                                                        response[0].IMAGEM02?doc.image(`./pdf/${nome_imagens_complementar}02.png`, 50, 205, { width: 15, height: 15 , align:"left" }):""  
+                                                                        response[0].IMAGEM03?doc.image(`./pdf/${nome_imagens_complementar}03.png`, 70, 205, { width: 15, height: 15 , align:"left" }):""  
+                                                                        response[0].IMAGEM04?doc.image(`./pdf/${nome_imagens_complementar}04.png`, 90, 205, { width: 15, height: 15 , align:"left" }):""  
+                                                                        response[0].IMAGEM05?doc.image(`./pdf/${nome_imagens_complementar}05.png`, 110, 205, { width: 15, height: 15 , align:"left" }):""  
+                                                                        response[0].IMAGEM06?doc.image(`./pdf/${nome_imagens_complementar}06.png`, 130, 205, { width: 15, height: 15 , align:"left" }):""  
+                                                                        response[0].IMAGEM07?doc.image(`./pdf/${nome_imagens_complementar}07.png`, 150, 205, { width: 15, height: 15 , align:"left" }):""  
+                                                                        response[0].IMAGEM08? doc.image(`./pdf/${nome_imagens_complementar}08.png`, 170, 205, { width: 15, height: 15 , align:"left" }):"" 
+                                                                        response[0].IMAGEM09?doc.image(`./pdf/${nome_imagens_complementar}09.png`, 190, 205, { width: 15, height: 15 , align:"left" }):""  
+                                                                        response[0].IMAGEM10?doc.image(`./pdf/${nome_imagens_complementar}10.png`, 210, 205, { width: 15, height: 15 , align:"left" }):""  
+                                                          
+
+                                                                        //LAVAGEM
+                                                                        doc
+                                                                        .fontSize(8)
+                                                                        .text("Lavagem", 30, 225)
+                      
+                                                                        geraHR(doc, 235);
+                                                                       
+                                                                        doc
+                                                                        .fontSize(6)
+                                                                        .text(`${response[0] && response[0].LAVAGEM?response[0].LAVAGEM:''}`,30,240);
+                                                                  
+                                                                  
+                                                                        //ARMAZENAGEM
+                                                                        doc
+                                                                        .fontSize(8)
+                                                                        .text("Armazenagem e descanso", 30, 280)
+                      
+                                                                        geraHR(doc, 290);
+                                                                       
+                                                                        doc
+                                                                        .fontSize(6)
+                                                                        .text(`${response[0] && response[0].ARMAZENAGEM?response[0].ARMAZENAGEM:''}`,30,295);
+                                                                  
+                                                                  
+                                                                        //ENFESTO PARA CORTE
+                                                                        doc
+                                                                        .fontSize(8)
+                                                                        .text("Enfesto para corte", 30, 345)
+                      
+                                                                        geraHR(doc, 355);
+                                                                       
+                                                                        doc
+                                                                        .fontSize(6)
+                                                                        .text(`${response[0] && response[0].CORTE?response[0].CORTE:''}`,30,360);
+
+                                                                        //CORTE E SEPARAÇÃO
+                                                                        doc
+                                                                        .fontSize(8)
+                                                                        .text("Corte e separação", 30, 455)
+                      
+                                                                        geraHR(doc, 465);
+                                                                      
+                                                                        doc
+                                                                        .fontSize(6)
+                                                                        .text(`${response[0] && response[0].SEPARACAO?response[0].SEPARACAO:''}`,30,470);
+                                                                  
+                                                                          //COSTURA
+                                                                          doc
+                                                                          .fontSize(8)
+                                                                          .text("Costura", 30, 570)
+                        
+                                                                          geraHR(doc, 580);
+                                                                        
+                                                                          doc
+                                                                          .fontSize(6)
+                                                                          .text(`${response[0] && response[0].COSTURA?response[0].COSTURA:''}`,30,585);
+                                                                              
+                                                                          //INFORMAÇÕES ADICIONAIS
+                                                                          doc
+                                                                          .fontSize(8)
+                                                                          .text("Informações adicionais", 30, 655)
+                        
+                                                                          geraHR(doc, 665);
+                                                                        
+                                                                          doc
+                                                                          .fontSize(6)
+                                                                          .text(`${response[0] && response[0].INFORMACOES_ADICIONAIS?response[0].INFORMACOES_ADICIONAIS:''}`,30,670);
+                                                                    
+                                                                         // var buf =  Buffer.from(response[0].IMAGEM01, 'base64');
+                                                                         var fs = require('fs');
+
+                                                                            //          var bufferBase64 = Buffer.from(response[0].IMAGEM01).toString('utf8');
+                                                                 //        Buffer.from(response[0].IMAGEM01).readableStreamBody.pipe(new Base64Encode()).pipe(fs.createWriteStream("image.png",{encoding: 'binary'}))
+            //     console.log('2');                                                
+                                                                 //const writer = fs.createWriteStream('./image.png')
+                                                                                                                         
+
+                                                             
+                                                                     /*     fs.writeFile('image.png',response[0].IMAGEM01.toString('utf8'), function(err, result) {
+                                                                             if(err) console.log('error', err);
+                                                                           });
+                                                                       */  
+                                                                          //fs.writeFile('image.png', response[0].IMAGEM01);
+                                                                          //doc.image('./image.png', 30, 215, { width: 150, height: 50 , align:"left" })  
+                                                                         // .fontSize(8)
+                                                                          
+                                                                        /*    var new PNG({ filterType:4 }).parse(response[0].IMAGEM01, function(error, data)
+                                                                        {
+                                                                            doc.image(`${data}`, 30, 215, { width: 150 , align:"right" })  
+                                                                        .fontSize(8)
+                                                                      //    console.log(error, data)
+                                                                        });*/
+                                                                     //  console.log(JSON.stringify(response[0]));
+                                                                        //console.log(byteStream(response[0].IMAGEM01));
+                                                                        //const rawBytes = Buffer.from(response[0].IMAGEM01);
+                                                                       // const encoded = rawBytes.toString('base64');
+
+                                                                //            doc.image(`${response[0].IMAGEM01}`.png), 30, 215, { width: 150 , align:"right" }  
+                                                                  //          .fontSize(8)
+                                                                       
+                                                                      
+                                                                        
+                      
+                      
+                                                    
+                                                  }
+  
+  
+                                              
+                                              function generateFooter(doc) {
+                                                        const range = doc.bufferedPageRange(); 
+                                                      
+                                                        var j=0;
+                                                        
+                                                        for( let j = 0; j <  (0 + range.count); j++) {
+        
+                                                          doc.switchToPage(j);
+                                                          geraHR(doc,doc.page.height - 17);
+        
+                                                          doc  
+                                                            .fontSize(8)
+                                                            .text(`Powered by SalesBreath - breathitsolutions@gmail.com       Página ${j + 1} of ${range.count}`, 
+                                                                    200, 
+                                                                    doc.page.height - 15, 
+                                                                    { height : 15});
+                                                        }
+        
+                                              }
+                                              
+                                              
+                                              function geraHR(doc, y) {
+                                                doc
+                                                  .strokeColor("#aaaaaa")
+                                                  .lineWidth(1)
+                                                  .moveTo(20, y)
+                                                  .lineTo(580, y)
+                                                  .stroke();
+                                              }
+                                            
+                                            let doc = new PDFDocument({ size: "A4", margin: 50,bufferPages:true});
+                                                                                      
+                                            geraCabecalhoEmpresa(doc);
+                                            geraCabecalhoProduto(doc);
+                                            generateFooter(doc);
+                                                    
+                                          
+                                            
+                                            /*
+                                              doc.pipe(fs.createWriteStream(`./pdf/espec.pdf`));                
+                                                  
+
+                                            doc.end();
+                                                */
+console.log('3');
+
+                                     
+                                            // Wait for the promise to get resolved...
+                         
+                                            doc.pipe(fs.createWriteStream(`./pdf/espec.pdf`));                
+                                            doc.end();
+                                           
+                                       
+                                                      setTimeout(()=>{
+
+                                                            resolvetd();
+                                                       }  , 3000);  
+                                          
+                                                          
+
+                                                       
+                                            
+                                                        
+                                                       
+                                          
+                                                                                                    //  return successResponse(200, url);
+
+                                        
+                                          
+
+
+                                          });
+                                        };
+                                          
+                                        const imagem = await saveimage();
+                                        const documento = await geradoc();
+                                        for(var i=1;i<10;i++){
+                                          x= String(i).padStart(2, '0');
+                                          try{
+                                        fs.unlinkSync(`./pdf/${nome_imagens_complementar}${x}.png`, function(err) {
+                                          if(err) {
+                                              console.info("File doesn't exist, won't remove it.");
+                                          }
+                                      });}catch(error){}
+                                        }
+                         console.log('12');
+                                          return  successResponse(200, './pdf/espec.pdf')
+                                      
+
+                                                                               
+                              }
+  
+  
+    catch (error) {
+              console.error('error -> ', logStruct('fetchprodutos', error))
+              return errorResponse(error.status, error.message);
+    }
+
+};
+
+
+module.exports = {
+    printPedido,
+    printEspec
+  }
+
+
+
