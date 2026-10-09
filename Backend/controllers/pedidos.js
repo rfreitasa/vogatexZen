@@ -64,7 +64,7 @@ const gerarPedido = async (reqData) => {
   //valida se os dados foram enviados no post. (campos preenchidos)
   //const validInput = validaPedidodeVenda(reqData)
 
-  console.log(reqData)
+  console.log(reqData);
 
   var registro = "1";
   var dados_cliente = {};
@@ -81,7 +81,7 @@ const gerarPedido = async (reqData) => {
       //Regra Obtem primeiramente a comissao do cliente , caso nao exista do vendedor , caso nao exista da  lista
 
       const lista_preco = await regrasModel.getListaPrecosByName(
-        reqData.items[0].LISTA_PRECO
+        reqData.items[0].LISTA_PRECO,
       );
 
       //const saleprofile = reqData.items[0].SALEPROFILE?reqData.items[0].SALEPROFILE:null; //obtem o saleprofile_id se existir
@@ -92,11 +92,10 @@ const gerarPedido = async (reqData) => {
       dados_vendedor.token_erp = reqData.token_erp;
 
       const comissao_cliente = await clientesModel.getContaById(dados_cliente);
-      const comissao_vendedor = await clientesModel.getContaById(
-        dados_vendedor
-      );
+      const comissao_vendedor =
+        await clientesModel.getContaById(dados_vendedor);
       const comissao_lista = await pedidosModel.getcomissionlist(
-        reqData.items[0].LISTA_PRECO
+        reqData.items[0].LISTA_PRECO,
       );
 
       var campanhas = await campaignModel.getCampaignsActive(reqData);
@@ -104,7 +103,7 @@ const gerarPedido = async (reqData) => {
       if (campanhas && campanhas[0]) {
         const possuiCampanha = clientePossuiCampanha(
           campanhas,
-          comissao_cliente
+          comissao_cliente,
         );
 
         if (possuiCampanha) {
@@ -121,18 +120,17 @@ const gerarPedido = async (reqData) => {
         comissao_list =
           comissao_lista[0].LISTA_PRECOS_PERCENTUAL_COMISSAO_DEFAULT;
       }
-       comissao =
-      comissao_cliente?.[0]?.properties?.salesCommission > 0
-        ? comissao_cliente[0].properties.salesCommission
-        : comissao_vendedor?.[0]?.properties?.salesCommission > 0
-        ? comissao_vendedor[0].properties.salesCommission
-        : comissao_list ?? 0;
-
+      comissao =
+        comissao_cliente?.[0]?.properties?.salesCommission > 0
+          ? comissao_cliente[0].properties.salesCommission
+          : comissao_vendedor?.[0]?.properties?.salesCommission > 0
+            ? comissao_vendedor[0].properties.salesCommission
+            : (comissao_list ?? 0);
 
       //obtendo perfil fiscal e de venda
       var perfil_fiscal = "";
       const response = await empresaModel.getEmpresaById_ERP(
-        reqData.empresa_id
+        reqData.empresa_id,
       );
 
       if (reqData.items[0].PROGRAMACAO_NUMERO != "P.E") {
@@ -148,7 +146,7 @@ const gerarPedido = async (reqData) => {
               ? responsef.filter((item) => item.code == "Venda")[0].id
               : "";
           }
-          
+
           if (
             response[0].EMPRESA_PERFIL_VENDA_PRG != "" &&
             response[0].EMPRESA_PERFIL_VENDA_PRG != null
@@ -180,16 +178,16 @@ const gerarPedido = async (reqData) => {
 
       //acima ele verifica se foi escolhido um perfil de vendas  e no caso de programacao ele obtem do cadastro do SB
       //Porem ha uma nova regra: caso exista um perfil de vendas vindo da API de estoque e gravada em SALEPROFILE em CARRINHO_ITEM, usar ela.
-      
-      if(reqData.items[0].SALEPROFILE!=null){
-        reqData.perfil_vendas= reqData.items[0].SALEPROFILE
+
+      if (reqData.items[0].SALEPROFILE != null) {
+        reqData.perfil_vendas = reqData.items[0].SALEPROFILE;
       }
       const geraPedido = await pedidosModel.geraPedidoNew(
         reqData,
         comissao,
         perfil_fiscal,
         Number(lista_preco[0].LISTA_PRECOS_NOME),
-        Number(lista_preco[0].LISTA_PRECOS_MOEDA)
+        Number(lista_preco[0].LISTA_PRECOS_MOEDA),
       );
 
       return successResponse(200, geraPedido);
@@ -263,7 +261,7 @@ const fetchPedidoByVendedor = async (reqData) => {
       //LISTARA PEDIDOS SOMENTE DO VENDEDOR
       const response = await pedidosModel.getpedidosByVendedor(
         reqData.vendedor_id,
-        reqData.where
+        reqData.where,
       );
       if (response && !response.length) {
         return errorResponse(404, "PedidosNotfound");
@@ -300,11 +298,11 @@ const fetchPedidos = async (reqData) => {
 
       if (dados_usuario[0].USUARIO_PERFIL === "vendedor") {
         const ArrayVendedores = await clientesModel.getArrayVendedores(
-          Number(dados_usuario[0].USUARIO_ID)
+          Number(dados_usuario[0].USUARIO_ID),
         );
 
         reqData.where.SALESPERSON_IDS = ArrayVendedores.map((vendedor) =>
-          encodeURIComponent(vendedor.USUARIO_CONTA_ID_ERP)
+          encodeURIComponent(vendedor.USUARIO_CONTA_ID_ERP),
         );
         const response = await pedidosModel.getpedidos(reqData);
         //  console.log(response);
@@ -328,27 +326,25 @@ const fetchPedidos = async (reqData) => {
             EMPRESA: item.company_code ? item.company_code : item.company.code,
             EMPRESA_ID: item.company_id ? item.company_id : "",
 
-          
-         
             APELIDO: item.person_name
-            ? item.person_name
-            : item.person.name
-            ? item.person.name
-            : item.person.fantasyName,
+              ? item.person_name
+              : item.person.name
+                ? item.person.name
+                : item.person.fantasyName,
 
             PEDIDO_EMISSAO: item.sale_date ? item.sale_date : item.date,
             PEDIDO_DISPONIBILIDADE: item.sale_availabilityDate
               ? item.sale_availabilityDate
               : item.availabilityDate
-              ? item.availabilityDate
-              : "",
+                ? item.availabilityDate
+                : "",
             TAGS: item.sale_tags ? item.sale_tags : item.tags ? item.tags : "",
 
             CLIENTE_CGC: "",
             CLIENTE_COD: item.person_id ? item.person_id : item.person.id,
             PEDIDO_REFERENCIA: "",
-            PEDIDO_VALOR: item.saleItem_totalValue
-              ? item.saleItem_totalValue
+            PEDIDO_VALOR: item.sum_totalValue
+              ? item.sum_totalValue
               : item.totalValue,
             NOTA_FISCAL_NUMERO: "",
             NOTA_FISCAL_EMISSAO: "",
@@ -360,8 +356,8 @@ const fetchPedidos = async (reqData) => {
             VENDEDOR_APELIDO: item.salesperson_fantasyName
               ? item.salesperson_fantasyName
               : item?.personSalesperson?.fantasyName
-              ? item?.personSalesperson?.fantasyName
-              : item?.personSalesperson?.name,
+                ? item?.personSalesperson?.fantasyName
+                : item?.personSalesperson?.name,
             VENDEDOR_ID: item.salesperson_id
               ? item.salesperson_id
               : item.personSalesperson?.id,
@@ -369,13 +365,13 @@ const fetchPedidos = async (reqData) => {
             PEDIDO_OBSERVACAO: item.properties
               ? item.properties.comments
               : item.sale_properties
-              ? item.sale_properties.comments
-              : "",
+                ? item.sale_properties.comments
+                : "",
             itens: "", // Adiciona o item atual ao array de itens
           };
           // Verifica se já existe um pedido com o mesmo ID
           const existingPedido = PedidoSeparado.find(
-            (p) => p.NUMERO_SISTEMA === item.sale_id
+            (p) => p.NUMERO_SISTEMA === item.sale_id,
           );
 
           if (existingPedido) {
@@ -392,13 +388,13 @@ const fetchPedidos = async (reqData) => {
             response[0].salesperson_id
               ? response[0].salesperson_id
               : response[0]?.sale?.personSalesperson?.id
-              ? response[0]?.sale?.personSalesperson?.id
-              : response[0]?.personSalesperson?.id
+                ? response[0]?.sale?.personSalesperson?.id
+                : response[0]?.personSalesperson?.id,
           ) !== Number(dados_usuario[0].USUARIO_CONTA_ID_ERP)
         ) {
           return errorResponse(
             404,
-            "Sem permissao para visualizar esse pedido"
+            "Sem permissao para visualizar esse pedido",
           );
         }
         if (response && !response.length) {
@@ -414,14 +410,14 @@ const fetchPedidos = async (reqData) => {
         var ArrayVendedores = "";
         if (dados_usuario[0].USUARIO_PERFIL === "assistente") {
           const dados_usuario = await clientesModel.getUserInformation(
-            reqData.email
+            reqData.email,
           );
           ArrayVendedores = await clientesModel.getArrayVendedores(
-            Number(dados_usuario[0].USUARIO_CONTA_SUPERVISOR_ID)
+            Number(dados_usuario[0].USUARIO_CONTA_SUPERVISOR_ID),
           );
         } else {
           ArrayVendedores = await clientesModel.getArrayVendedores(
-            Number(dados_usuario[0].USUARIO_ID)
+            Number(dados_usuario[0].USUARIO_ID),
           );
         }
 
@@ -430,13 +426,13 @@ const fetchPedidos = async (reqData) => {
           (li, idx, self) =>
             self
               .map((itm) => itm.USUARIO_CONTA_ID_ERP)
-              .indexOf(li.USUARIO_CONTA_ID_ERP) === idx
+              .indexOf(li.USUARIO_CONTA_ID_ERP) === idx,
         );
         //console.log(ArrayVendedores)
 
         if (!reqData.where.SALESPERSON_IDS) {
           reqData.where.SALESPERSON_IDS = ArrayVendedores.map((vendedor) =>
-            encodeURIComponent(vendedor.USUARIO_CONTA_ID_ERP)
+            encodeURIComponent(vendedor.USUARIO_CONTA_ID_ERP),
           );
         }
 
@@ -462,26 +458,25 @@ const fetchPedidos = async (reqData) => {
             EMPRESA: item.company_code ? item.company_code : item.company.code,
             EMPRESA_ID: item.company_id ? item.company_id : "",
 
-         
             APELIDO: item.person_name
-            ? item.person_name
-            : item.person.name
-            ? item.person.name
-            : item.person.fantasyName,
+              ? item.person_name
+              : item.person.name
+                ? item.person.name
+                : item.person.fantasyName,
 
             PEDIDO_EMISSAO: item.sale_date ? item.sale_date : item.date,
             PEDIDO_DISPONIBILIDADE: item.sale_availabilityDate
               ? item.sale_availabilityDate
               : item.availabilityDate
-              ? item.availabilityDate
-              : "",
+                ? item.availabilityDate
+                : "",
             TAGS: item.sale_tags ? item.sale_tags : item.tags ? item.tags : "",
 
             CLIENTE_CGC: "",
             CLIENTE_COD: item.person_id ? item.person_id : item.person.id,
             PEDIDO_REFERENCIA: "",
-            PEDIDO_VALOR: item.saleItem_totalValue
-              ? item.saleItem_totalValue
+            PEDIDO_VALOR: item.sum_totalValue
+              ? item.sum_totalValue
               : item.totalValue,
             NOTA_FISCAL_NUMERO: "",
             NOTA_FISCAL_EMISSAO: "",
@@ -490,16 +485,16 @@ const fetchPedidos = async (reqData) => {
             PEDIDO_OBSERVACAO: item.properties
               ? item.properties.comments
               : item.sale_properties
-              ? item.sale_properties.comments
-              : "",
+                ? item.sale_properties.comments
+                : "",
             TRANSPORTADORA_NOME: item.shipping_fantasyName
               ? item.shipping_fantasyName
               : item?.personShipping?.name,
             VENDEDOR_APELIDO: item.salesperson_fantasyName
               ? item.salesperson_fantasyName
               : item?.personSalesperson?.fantasyName
-              ? item?.personSalesperson?.fantasyName
-              : item?.personSalesperson?.name,
+                ? item?.personSalesperson?.fantasyName
+                : item?.personSalesperson?.name,
             VENDEDOR_ID: item.salesperson_id
               ? item.salesperson_id
               : item.personSalesperson?.id,
@@ -509,7 +504,7 @@ const fetchPedidos = async (reqData) => {
 
           // Verifica se já existe um pedido com o mesmo ID
           const existingPedido = PedidoSeparado.find(
-            (p) => p.NUMERO_SISTEMA === item.sale_id
+            (p) => p.NUMERO_SISTEMA === item.sale_id,
           );
 
           if (existingPedido) {
@@ -537,7 +532,7 @@ const fetchPedidos = async (reqData) => {
         var ArrayVendedores = "";
         //pega todos os IDs de seus subordinados e insere dentro de um array
         ArrayVendedores = await clientesModel.getArrayVendedoresOperador(
-          Number(dados_usuario[0].USUARIO_ID)
+          Number(dados_usuario[0].USUARIO_ID),
         );
 
         //Elimina vendedores com o mesmo codigo ID ERP, senao duplicaremos o retorno dos clientes.
@@ -545,11 +540,11 @@ const fetchPedidos = async (reqData) => {
           (li, idx, self) =>
             self
               .map((itm) => itm.USUARIO_CONTA_ID_ERP)
-              .indexOf(li.USUARIO_CONTA_ID_ERP) === idx
+              .indexOf(li.USUARIO_CONTA_ID_ERP) === idx,
         );
 
         const response = await pedidosModel.getpedidos(reqData);
-                 console.log(response);
+        console.log(response);
         var PedidoSeparado = [];
 
         for (const item of response) {
@@ -571,26 +566,25 @@ const fetchPedidos = async (reqData) => {
             EMPRESA: item.company_code ? item.company_code : item.company.code,
             EMPRESA_ID: item.company_id ? item.company_id : "",
 
-          
             APELIDO: item.person_name
-            ? item.person_name
-            : item.person.name
-            ? item.person.name
-            : item.person.fantasyName,
+              ? item.person_name
+              : item.person.name
+                ? item.person.name
+                : item.person.fantasyName,
 
             PEDIDO_EMISSAO: item.sale_date ? item.sale_date : item.date,
             PEDIDO_DISPONIBILIDADE: item.sale_availabilityDate
               ? item.sale_availabilityDate
               : item.availabilityDate
-              ? item.availabilityDate
-              : "",
+                ? item.availabilityDate
+                : "",
             TAGS: item.sale_tags ? item.sale_tags : item.tags ? item.tags : "",
 
             CLIENTE_CGC: "",
             CLIENTE_COD: item.person_id ? item.person_id : item.person.id,
             PEDIDO_REFERENCIA: "",
-            PEDIDO_VALOR: item.saleItem_totalValue
-              ? item.saleItem_totalValue
+            PEDIDO_VALOR: item.sum_totalValue
+              ? item.sum_totalValue
               : item.totalValue,
             NOTA_FISCAL_NUMERO: "",
             NOTA_FISCAL_EMISSAO: "",
@@ -599,16 +593,16 @@ const fetchPedidos = async (reqData) => {
             PEDIDO_OBSERVACAO: item.properties
               ? item.properties.comments
               : item.sale_properties
-              ? item.sale_properties.comments
-              : "",
+                ? item.sale_properties.comments
+                : "",
             TRANSPORTADORA_NOME: item.shipping_fantasyName
               ? item.shipping_fantasyName
               : item?.personShipping?.name,
             VENDEDOR_APELIDO: item.salesperson_fantasyName
               ? item.salesperson_fantasyName
               : item?.personSalesperson?.fantasyName
-              ? item?.personSalesperson?.fantasyName
-              : item?.personSalesperson?.name,
+                ? item?.personSalesperson?.fantasyName
+                : item?.personSalesperson?.name,
             VENDEDOR_ID: item.salesperson_id
               ? item.salesperson_id
               : item.personSalesperson?.id,
@@ -617,7 +611,7 @@ const fetchPedidos = async (reqData) => {
           };
           // Verifica se já existe um pedido com o mesmo ID
           const existingPedido = PedidoSeparado.find(
-            (p) => p.NUMERO_SISTEMA === item.sale_id
+            (p) => p.NUMERO_SISTEMA === item.sale_id,
           );
 
           if (existingPedido) {
@@ -682,10 +676,10 @@ const fetchPedido = async (reqData) => {
         if (response[0] && response[0]?.sale?.invoice?.id) {
           const response_DANFE = await pedidosModel.getDanfe(
             reqData,
-            response[0].sale.invoice.id
+            response[0].sale.invoice.id,
           );
           response[0].danfe = response_DANFE.data.filter(
-            (item) => item.statusCode == "PROCESSED"
+            (item) => item.statusCode == "PROCESSED",
           )[0];
         }
         //console.log(dados_usuario[0]);
@@ -696,12 +690,12 @@ const fetchPedido = async (reqData) => {
             Number(
               response[0].salesperson_id
                 ? response[0].salesperson_id
-                : response[0].sale.personSalesperson.id
+                : response[0].sale.personSalesperson.id,
             ) !== Number(dados_usuario[0].USUARIO_CONTA_ID_ERP)
           ) {
             return errorResponse(
               404,
-              "Sem permissao para visualizar esse pedido"
+              "Sem permissao para visualizar esse pedido",
             );
           } else {
             return successResponse(200, response);
@@ -721,10 +715,10 @@ const fetchPedido = async (reqData) => {
         if (response[0] && response[0]?.sale?.invoice?.id) {
           const response_DANFE = await pedidosModel.getDanfe(
             reqData,
-            response[0].sale.invoice.id
+            response[0].sale.invoice.id,
           );
           response[0].danfe = response_DANFE.data.filter(
-            (item) => item.statusCode == "PROCESSED"
+            (item) => item.statusCode == "PROCESSED",
           )[0];
         }
         if (response && !response.length) {

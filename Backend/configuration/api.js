@@ -16,7 +16,7 @@ const API = {
 }
 const REGRAS = {
   show_price: true,
-  client_tag_add: 'blocked,customer,salesbreath'
+  client_tag_add: 'customer,salesbreath'
 
 }
 const ERP_CONF = {
