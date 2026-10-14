@@ -752,7 +752,7 @@ exports.getPedidoDeVendas = async (dados) => {
       SHOW_ACCOUNT: false,
 
       SHOW_UNIT: true,
-      SHOW_UNIT_VALUE: false,
+      SHOW_UNIT_VALUE: true,
       SHOW_COST_UNIT_VALUE: false,
       SHOW_RETAIL_UNIT_VALUE: false,
 
@@ -837,7 +837,7 @@ exports.getPedidoDeVendas = async (dados) => {
         SHOW_ACCOUNT: false,
 
         SHOW_UNIT: true,
-        SHOW_UNIT_VALUE: false,
+        SHOW_UNIT_VALUE: true,
         SHOW_COST_UNIT_VALUE: false,
         SHOW_RETAIL_UNIT_VALUE: false,
 
