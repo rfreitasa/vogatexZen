@@ -2519,7 +2519,7 @@ const getReportProntaEntrega = async (reqData, token_erp) => {
 
     const response_regras = await regrasModel.getAllListaPrecos();
     var regra = response_regras.find(
-      (item) => Number(item.LISTA_PRECOS_ID) === Number(reqData.lista)
+      (item) => Number(item.LISTA_PRECOS_ID) === Number(reqData.lista),
     );
 
     var exibe_valor = regra ? regra.LISTA_PRECOS_EXIBE_VALOR : null;
@@ -2542,13 +2542,33 @@ const getReportProntaEntrega = async (reqData, token_erp) => {
         }
       });
 
-    
+      const groupedResponse = response.reduce((grouped, cur) => {
+        const scheduleIdKey =
+          cur.schedule_id !== null ? cur.schedule_id : "null";
+
+        // Verifica a existência do scheduleId no conjunto de compras
+        const isPurchaseActive =
+          scheduleIdKey > 0 && purchaseSet.has(scheduleIdKey);
+
+        const companyIdKey =
+          cur.stockCluster_id !== null ? cur.stockCluster_id : null;
+        const schedulePart =
+          cur.schedule_id && isPurchaseActive ? `-${scheduleIdKey}` : "";
+
+        const key = `${cur.productPacking_id}${schedulePart}-${companyIdKey}`;
+        if (!grouped[key]) {
+          grouped[key] = { ...cur, quantity: 0 };
+        }
+
+        grouped[key].quantity += cur.quantity;
+        return grouped;
+      }, {});
 
       // Filtra os elementos com quantity diferente de 0 //Não pode listar produtos com quantidade 0 ***REGRA***
       const filteredGroupedResponse = Object.fromEntries(
-        Object.entries(response).filter(
-          ([key, value]) => value.quantity > 0 && !value.schedule_id
-        )
+        Object.entries(groupedResponse).filter(
+          ([key, value]) => value.quantity > 0 && !value.schedule_id,
+        ),
       ); //console.log(filteredGroupedResponse);
       // Convertendo o objeto agrupado de volta para um array
       response_organized = Object.values(filteredGroupedResponse);
@@ -2561,13 +2581,13 @@ const getReportProntaEntrega = async (reqData, token_erp) => {
         selectedCompaniesgroup != null
           ? selectedCompaniesgroup.map((company) => {
               return DadosEmpresa.find(
-                (item) => Number(item.EMPRESA_ID_ERP) === Number(company)
+                (item) => Number(item.EMPRESA_ID_ERP) === Number(company),
               ).EMPRESA_CLUSTER;
             })
           : null;
       response_organized = reqData.empresas
         ? response_organized.filter((item) =>
-            selectedCompanies.includes(String(item.stockCluster_id))
+            selectedCompanies.includes(String(item.stockCluster_id)),
           )
         : response_organized;
       for (let index = 0; index < response_organized.length; index++) {
@@ -2584,7 +2604,7 @@ const getReportProntaEntrega = async (reqData, token_erp) => {
 
     const DadosAgrupados = groupByItem(
       response_organized,
-      (item) => item.product_id
+      (item) => item.product_id,
     );
 
     //   console.log(DadosAgrupados);
@@ -2628,7 +2648,7 @@ const getReportProntaEntrega = async (reqData, token_erp) => {
         35,
         "",
         "",
-        "left"
+        "left",
       );
       field(doc, "Helvetica-Bold", 10, "Parâmetro:", 30, 45, "", "", "left");
       field(
@@ -2640,7 +2660,7 @@ const getReportProntaEntrega = async (reqData, token_erp) => {
         46,
         "",
         "",
-        "left"
+        "left",
       );
 
       geraHR(doc, 60);
@@ -2674,7 +2694,7 @@ const getReportProntaEntrega = async (reqData, token_erp) => {
           position,
           "",
           "",
-          "left"
+          "left",
         );
 
         position = position + 10;
@@ -2694,7 +2714,7 @@ const getReportProntaEntrega = async (reqData, token_erp) => {
           position,
           "",
           "",
-          "left"
+          "left",
         );
         position = position + 20;
 
